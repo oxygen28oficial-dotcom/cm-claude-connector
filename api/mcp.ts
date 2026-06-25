@@ -4,7 +4,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod/v4";
-import type { IncomingMessage, ServerResponse } from "http";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 import {
   listCampaigns,
   getAccountInsights,
@@ -75,7 +75,7 @@ function buildServer() {
   return server;
 }
 
-export default async function handler(req: IncomingMessage, res: ServerResponse) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   const server = buildServer();
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
@@ -87,5 +87,5 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   });
 
   await server.connect(transport);
-  await transport.handleRequest(req, res);
+  await transport.handleRequest(req, res, req.body);
 }
