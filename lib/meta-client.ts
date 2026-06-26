@@ -102,3 +102,102 @@ export async function getCampaignInsights(
   });
   return data.data;
 }
+
+// --- Tipos adicionales ---
+
+export interface MetaAdSet {
+  id: string;
+  name: string;
+  status: string;
+  campaign_id?: string;
+  daily_budget?: string;
+  lifetime_budget?: string;
+  targeting?: unknown;
+}
+
+export interface MetaAd {
+  id: string;
+  name: string;
+  status: string;
+  adset_id?: string;
+  campaign_id?: string;
+  creative?: { id?: string; name?: string };
+}
+
+// --- Funciones de Ad Sets ---
+
+/**
+ * Lista los conjuntos de anuncios (ad sets) de una cuenta publicitaria,
+ * opcionalmente filtrados por campaña.
+ */
+export async function listAdSets(
+  adAccountId: string,
+  campaignId?: string
+): Promise<MetaAdSet[]> {
+  if (campaignId) {
+    const data = await metaGet<{ data: MetaAdSet[] }>(`/${campaignId}/adsets`, {
+      fields: "id,name,status,campaign_id,daily_budget,lifetime_budget",
+      limit: "100",
+    });
+    return data.data;
+  }
+  const accountPath = adAccountId.startsWith("act_") ? adAccountId : `act_${adAccountId}`;
+  const data = await metaGet<{ data: MetaAdSet[] }>(`/${accountPath}/adsets`, {
+    fields: "id,name,status,campaign_id,daily_budget,lifetime_budget",
+    limit: "100",
+  });
+  return data.data;
+}
+
+/**
+ * Obtiene insights de un conjunto de anuncios específico.
+ */
+export async function getAdSetInsights(
+  adSetId: string,
+  datePreset: string = "last_7d"
+): Promise<MetaInsight[]> {
+  const data = await metaGet<{ data: MetaInsight[] }>(`/${adSetId}/insights`, {
+    fields: "impressions,clicks,spend,ctr,cpc,cpm,reach",
+    date_preset: datePreset,
+  });
+  return data.data;
+}
+
+// --- Funciones de Ads ---
+
+/**
+ * Lista los anuncios de una cuenta publicitaria,
+ * opcionalmente filtrados por campaña o conjunto de anuncios.
+ */
+export async function listAds(
+  adAccountId: string,
+  parentId?: string
+): Promise<MetaAd[]> {
+  if (parentId) {
+    const data = await metaGet<{ data: MetaAd[] }>(`/${parentId}/ads`, {
+      fields: "id,name,status,adset_id,campaign_id,creative{id,name}",
+      limit: "100",
+    });
+    return data.data;
+  }
+  const accountPath = adAccountId.startsWith("act_") ? adAccountId : `act_${adAccountId}`;
+  const data = await metaGet<{ data: MetaAd[] }>(`/${accountPath}/ads`, {
+    fields: "id,name,status,adset_id,campaign_id,creative{id,name}",
+    limit: "100",
+  });
+  return data.data;
+}
+
+/**
+ * Obtiene insights de un anuncio específico.
+ */
+export async function getAdInsights(
+  adId: string,
+  datePreset: string = "last_7d"
+): Promise<MetaInsight[]> {
+  const data = await metaGet<{ data: MetaInsight[] }>(`/${adId}/insights`, {
+    fields: "impressions,clicks,spend,ctr,cpc,cpm,reach",
+    date_preset: datePreset,
+  });
+  return data.data;
+}

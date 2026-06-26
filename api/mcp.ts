@@ -9,6 +9,10 @@ import {
   listCampaigns,
   getAccountInsights,
   getCampaignInsights,
+  listAdSets,
+  getAdSetInsights,
+  listAds,
+  getAdInsights,
 } from "../lib/meta-client.js";
 
 function buildServer() {
@@ -18,23 +22,29 @@ function buildServer() {
   });
 
   server.tool(
-    "listar_campanas",
-    "Lista todas las campañas de la cuenta publicitaria de Meta (Facebook/Instagram), incluyendo su nombre, estado (activa, pausada, etc.) y objetivo.",
-    {},
-    async () => {
+    "listar_conjuntos_anuncios",
+    "Lista los conjuntos de anuncios (ad sets) de la cuenta publicitaria. Si se da un campaign_id, solo lista los conjuntos de esa campaña específica. Un conjunto de anuncios define audiencia, presupuesto y programación.",
+    {
+      campaign_id: z
+        .string()
+        .optional()
+        .describe("ID de la campaña para filtrar. Si se omite, lista todos los conjuntos de la cuenta."),
+    },
+    async ({ campaign_id }) => {
       const adAccountId = process.env.META_AD_ACCOUNT_ID;
       if (!adAccountId) throw new Error("META_AD_ACCOUNT_ID no configurado");
-      const campaigns = await listCampaigns(adAccountId);
+      const adSets = await listAdSets(adAccountId, campaign_id);
       return {
-        content: [{ type: "text", text: JSON.stringify(campaigns, null, 2) }],
+        content: [{ type: "text", text: JSON.stringify(adSets, null, 2) }],
       };
     }
   );
 
   server.tool(
-    "resumen_rendimiento_cuenta",
-    "Da un resumen del rendimiento de todas las campañas de la cuenta publicitaria en un periodo de tiempo: impresiones, clics, gasto, CTR, CPC, CPM y alcance.",
+    "rendimiento_conjunto_anuncios",
+    "Da las métricas de rendimiento de un conjunto de anuncios específico (impresiones, clics, gasto, CTR, CPC, CPM, alcance) en un periodo de tiempo determinado.",
     {
+      adset_id: z.string().describe("El ID del conjunto de anuncios a consultar"),
       periodo: z
         .string()
         .optional()
@@ -42,10 +52,8 @@ function buildServer() {
           "Periodo: today, yesterday, last_7d, last_14d, last_30d, this_month, last_month. Por defecto last_7d"
         ),
     },
-    async ({ periodo }) => {
-      const adAccountId = process.env.META_AD_ACCOUNT_ID;
-      if (!adAccountId) throw new Error("META_AD_ACCOUNT_ID no configurado");
-      const insights = await getAccountInsights(adAccountId, periodo || "last_7d");
+    async ({ adset_id, periodo }) => {
+      const insights = await getAdSetInsights(adset_id, periodo || "last_7d");
       return {
         content: [{ type: "text", text: JSON.stringify(insights, null, 2) }],
       };
@@ -53,10 +61,31 @@ function buildServer() {
   );
 
   server.tool(
-    "rendimiento_campana",
-    "Da las métricas de rendimiento de una campaña específica de Meta Ads en un periodo de tiempo determinado.",
+    "listar_anuncios",
+    "Lista los anuncios individuales (el contenido creativo: imagen, video o texto) de la cuenta publicitaria. Si se da un parent_id (puede ser el ID de una campaña o de un conjunto de anuncios), solo lista los anuncios dentro de ese elemento.",
     {
-      campaign_id: z.string().describe("El ID de la campaña a consultar"),
+      parent_id: z
+        .string()
+        .optional()
+        .describe(
+          "ID de la campaña o conjunto de anuncios para filtrar. Si se omite, lista todos los anuncios de la cuenta."
+        ),
+    },
+    async ({ parent_id }) => {
+      const adAccountId = process.env.META_AD_ACCOUNT_ID;
+      if (!adAccountId) throw new Error("META_AD_ACCOUNT_ID no configurado");
+      const ads = await listAds(adAccountId, parent_id);
+      return {
+        content: [{ type: "text", text: JSON.stringify(ads, null, 2) }],
+      };
+    }
+  );
+
+  server.tool(
+    "rendimiento_anuncio",
+    "Da las métricas de rendimiento de un anuncio individual específico (impresiones, clics, gasto, CTR, CPC, CPM, alcance) en un periodo de tiempo determinado. Útil para saber qué creativo (imagen/video) está funcionando mejor.",
+    {
+      ad_id: z.string().describe("El ID del anuncio a consultar"),
       periodo: z
         .string()
         .optional()
@@ -64,8 +93,8 @@ function buildServer() {
           "Periodo: today, yesterday, last_7d, last_14d, last_30d, this_month, last_month. Por defecto last_7d"
         ),
     },
-    async ({ campaign_id, periodo }) => {
-      const insights = await getCampaignInsights(campaign_id, periodo || "last_7d");
+    async ({ ad_id, periodo }) => {
+      const insights = await getAdInsights(ad_id, periodo || "last_7d");
       return {
         content: [{ type: "text", text: JSON.stringify(insights, null, 2) }],
       };
